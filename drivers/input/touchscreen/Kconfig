@@ -1274,6 +1274,18 @@ config TOUCHSCREEN_SUR40
 	  To compile this driver as a module, choose M here: the
 	  module will be called sur40.
 
+config TOUCHSCREEN_ILITEK_CHIPSET
+        tristate "Ilitek touchpanel Ilitek series"
+        depends on I2C
+        help
+          Say Y here if you have a Ilitek ili9881 touchscreen.
+          Ilitek controllers are multi touch controllers which can
+          report 10 touches at a time.
+
+          If unsure, say N.
+
+source "drivers/input/touchscreen/ilitek_mmi/Kconfig"
+
 config TOUCHSCREEN_SURFACE3_SPI
 	tristate "Ntrig/Microsoft Surface 3 SPI touchscreen"
 	depends on SPI
