@@ -699,6 +699,9 @@ dtb-$(CONFIG_SANDERS_DTB) += \
 	msm8953-sanders-p3.dtb \
 	msm8953-sanders-p4.dtb
 
+dtb-$(CONFIG_JETER_DTB) += \
+        msm8937-jeter-p0.dtb
+
 endif
 
 dtb-$(CONFIG_ARCH_SDM845_VM) += sdm845-vm.dtb
