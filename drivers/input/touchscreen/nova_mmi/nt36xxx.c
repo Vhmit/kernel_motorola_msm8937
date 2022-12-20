@@ -1753,28 +1753,27 @@ static int power_notifier_callback(struct notifier_block *self, unsigned long ev
 	bool present;
 	int retval;
 
-	if ((event == PSY_EVENT_PROP_ADDED || event == PSY_EVENT_PROP_CHANGED)
-		&& psy && psy->get_property && psy->name &&
-		!strncmp(psy->name, "usb", sizeof("usb"))) {
-		NVT_LOG("[usb]ps notification: event = %lu\n", event);
-
-		retval = ps_get_state(psy, &present);
-		if (retval) {
-			NVT_LOG("[usb]psy get property failed\n");
-			return retval;
-		}
-
-		if (event == PSY_EVENT_PROP_CHANGED) {
-			if (usb_state == present) {
-				NVT_LOG("[usb]ps present state not change\n");
-				return 0;
-			}
-		}
-		usb_state = present;
-		queue_work(usb_wq, &ts->usb_work);
-	}
-
-	return 0;
+//	if ((event == PSY_EVENT_PROP_ADDED || event == PSY_EVENT_PROP_CHANGED)
+//		&& psy && psy->get_property && psy->name &&
+//		!strncmp(psy->name, "usb", sizeof("usb"))) {
+//		NVT_LOG("[usb]ps notification: event = %lu\n", event);
+//
+//		retval = ps_get_state(psy, &present);
+//		if (retval) {
+//			NVT_LOG("[usb]psy get property failed\n")			return retval;
+//		}
+//
+//		if (event == PSY_EVENT_PROP_CHANGED) {
+//			if (usb_state == present) {
+//				NVT_LOG("[usb]ps present state not change\n");
+//				return 0;
+//			}
+//		}
+//		usb_state = present;
+//		queue_work(usb_wq, &ts->usb_work);
+//	}
+//
+//	return 0;
 }
 
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
