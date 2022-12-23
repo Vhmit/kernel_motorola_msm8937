@@ -1566,16 +1566,16 @@ static int ps_get_state(struct ft_ts_data *data,
 	union power_supply_propval pval = {0};
 	int retval;
 
-	retval = psy->get_property(psy, POWER_SUPPLY_PROP_PRESENT, &pval);
-
-	if (retval) {
-		dev_err(dev, "%s psy get property failed\n", psy->name);
-		return retval;
-	}
-	*present = (pval.intval) ? true : false;
-	dev_dbg(dev, "%s is %s\n", psy->name,
-			(*present) ? "present" : "not present");
-	return 0;
+//	retval = psy->get_property(psy, POWER_SUPPLY_PROP_PRESENT, &pval);
+//
+//	if (retval) {
+//		dev_err(dev, "%s psy get property failed\n", psy->name);
+//		return retval;
+//	}
+//	*present = (pval.intval) ? true : false;
+//	dev_dbg(dev, "%s is %s\n", psy->name,
+//			(*present) ? "present" : "not present");
+//	return 0;
 }
 
 static void ft_update_ps_chg_cm_state(
@@ -1647,28 +1647,28 @@ static int ps_notify_callback(struct notifier_block *self,
 	bool present;
 	int retval;
 
-	if ((event == PSY_EVENT_PROP_ADDED || event == PSY_EVENT_PROP_CHANGED)
-		&& psy && psy->get_property && psy->name &&
-		!strncmp(psy->name, "usb", sizeof("usb")) && data) {
-		dev = &data->client->dev;
-		dev_dbg(dev, "ps notification: event = %lu\n", event);
-		retval = ps_get_state(data, psy, &present);
-		if (retval) {
-			dev_err(dev, "psy get property failed\n");
-			return retval;
-		}
-
-		if (event == PSY_EVENT_PROP_CHANGED) {
-			if (data->ps_is_present == present) {
-				dev_info(dev, "ps present state not change\n");
-				return 0;
-			}
-		}
-		data->ps_is_present = present;
-		schedule_work(&data->ps_notify_work);
-	}
-
-	return 0;
+//	if ((event == PSY_EVENT_PROP_ADDED || event == PSY_EVENT_PROP_CHANGED)
+//		&& psy && psy->get_property && psy->name &&
+//		!strncmp(psy->name, "usb", sizeof("usb")) && data) {
+//		dev = &data->client->dev;
+//		dev_dbg(dev, "ps notification: event = %lu\n", event);
+//		retval = ps_get_state(data, psy, &present);
+//		if (retval) {
+//			dev_err(dev, "psy get property failed\n");
+//			return retval;
+//		}
+//
+//		if (event == PSY_EVENT_PROP_CHANGED) {
+//			if (data->ps_is_present == present) {
+//				dev_info(dev, "ps present state not change\n");
+//				return 0;
+//			}
+//		}
+//		data->ps_is_present = present;
+//		schedule_work(&data->ps_notify_work);
+//	}
+//
+//	return 0;
 }
 
 static void ft_detection_work(struct work_struct *work)
