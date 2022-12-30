@@ -441,6 +441,7 @@ static int xhci_plat_runtime_idle(struct device *dev)
 
 static int xhci_plat_pm_freeze(struct device *dev)
 {
+<<<<<<< HEAD
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
 	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
 
@@ -472,40 +473,43 @@ static int xhci_plat_pm_restore(struct device *dev)
 	return ret;
 }
 
-static int xhci_plat_runtime_suspend(struct device *dev)
+static int xhci_plat_suspend(struct device *dev)
 {
-	struct usb_hcd *hcd = dev_get_drvdata(dev);
-	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
+	struct usb_hcd	*hcd = dev_get_drvdata(dev);
+	struct xhci_hcd	*xhci = hcd_to_xhci(hcd);
 
-	if (!xhci)
+	if (!xhci || hcd_to_bus(hcd)->skip_resume)
 		return 0;
-
-	dev_dbg(dev, "xhci-plat runtime suspend\n");
 
 	return xhci_suspend(xhci, true);
 }
 
-static int xhci_plat_runtime_resume(struct device *dev)
+static int xhci_plat_resume(struct device *dev)
 {
-	struct usb_hcd *hcd = dev_get_drvdata(dev);
-	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
+	struct usb_hcd	*hcd = dev_get_drvdata(dev);
+	struct xhci_hcd	*xhci = hcd_to_xhci(hcd);
 	int ret;
 
-	if (!xhci)
+	if (!xhci || hcd_to_bus(hcd)->skip_resume)
 		return 0;
 
-	dev_dbg(dev, "xhci-plat runtime resume\n");
+	ret = xhci_resume(xhci, 0);
+	if (ret)
+		return ret;
 
-	ret = xhci_resume(xhci, false);
-	pm_runtime_mark_last_busy(dev);
+	pm_runtime_disable(dev);
+	pm_runtime_set_active(dev);
+	pm_runtime_enable(dev);
 
-	return ret;
+        return 0;
 }
 
 static const struct dev_pm_ops xhci_plat_pm_ops = {
 	.freeze		= xhci_plat_pm_freeze,
 	.restore	= xhci_plat_pm_restore,
 	.thaw		= xhci_plat_pm_restore,
+        .suspend 	= xhci_plat_suspend,
+	.resume 	= xhci_plat_resume,
 	SET_RUNTIME_PM_OPS(xhci_plat_runtime_suspend, xhci_plat_runtime_resume,
 			   xhci_plat_runtime_idle)
 };
