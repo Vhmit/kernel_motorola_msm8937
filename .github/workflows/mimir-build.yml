@@ -3,6 +3,25 @@ name: Mimir-Kernel
 on:
   workflow_dispatch:
     inputs:
+      device:
+        description: 'Select target device'
+        required: true
+        default: 'deen'
+        type: choice
+        options:
+          - 'addison'
+          - 'albus'
+          - 'ali'
+          - 'cedric'
+          - 'deen'
+          - 'hannah'
+          - 'james'
+          - 'jeter'
+          - 'montana'
+          - 'owens'
+          - 'perry'
+          - 'potter'
+          - 'sanders'
       droidspaces:
         description: 'DroidSpaces support?'
         required: true
@@ -28,8 +47,6 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      DEVICE: deen
-      DEVICE_NAME: Motorola One
       KERNEL_NAME: Mimir Kernel
 
     steps:
@@ -46,12 +63,34 @@ jobs:
       - name: Setting up the environment
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y gcc-aarch64-linux-gnu jq zip curl git make python3 perl libssl-dev libelf-dev bc
+          sudo apt-get install -y gcc-arm-linux-gnueabi gcc-aarch64-linux-gnu jq zip curl git make python3 perl libssl-dev libelf-dev bc
 
           # Creates the manual symbolic link to replace the old python-is-python3
           sudo ln -sf /usr/bin/python3 /usr/bin/python
 
-          # Generate environmental variables
+          # Target device configuration
+          DEVICE_SELECTED="${{ github.event.inputs.device }}"
+          echo "DEVICE=${DEVICE_SELECTED}" >> $GITHUB_ENV
+
+          case "${DEVICE_SELECTED}" in
+            "addison") NAME="Moto Z Play" ;;
+            "albus") NAME="Moto Z2 Play" ;;
+            "ali")    NAME="Moto G6" ;;
+            "cedric")   NAME="Moto G5" ;;
+            "deen")   NAME="Moto One" ;;
+            "hannah")    NAME="Moto E5+" ;;
+            "james")   NAME="Moto E5 Play" ;;
+            "jeter")    NAME="Moto G6 Play" ;;
+            "montana")  NAME="Moto G5s" ;;
+            "owens")  NAME="Moto E4 Plus" ;;
+            "perry")  NAME="Moto E4" ;;
+            "potter")  NAME="Moto G5 Plus" ;;
+            "sanders")  NAME="Moto G5s Plus" ;;
+            *)         NAME="Motorola Device" ;;
+          esac
+          echo "DEVICE_NAME=${NAME}" >> $GITHUB_ENV
+
+          # Environment variables
           echo "BUILD_DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
           echo "REPO_NAME=${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
 
@@ -60,7 +99,7 @@ jobs:
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
           -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
           -d "parse_mode=markdown" \
-          -d "text=🚀 *New version of Mimir Kernel is compiling!*%0A%0A📦 *Repo:* \`${{ env.REPO_NAME }}\` %0A📱 *Device:* ${{ env.DEVICE_NAME }} %0A🌿 *Branch:* \`${{ github.ref_name }}\` %0A🧩 *Droidspaces:* \`${{ github.event.inputs.droidspaces }}\`   /   🔐 *KernelSU:* \`${{ github.event.inputs.ksu }}\` %0A⏳ *Please wait for completion...*" \
+          -d "text=🚀 *New version of Mimir Kernel is compiling!*%0A%0A📦 *Repo:* \`${{ env.REPO_NAME }}\` %0A📱 *Device:* ${{ env.DEVICE_NAME }} (\`${{ env.DEVICE }}\`) %0A🌿 *Branch:* \`${{ github.ref_name }}\` %0A🧩 *Droidspaces:* \`${{ github.event.inputs.droidspaces }}\`   /   🔐 *KernelSU:* \`${{ github.event.inputs.ksu }}\` %0A⏳ *Please wait for completion...*" \
           -d "reply_markup={\"inline_keyboard\":[[{\"text\":\"🔍 View real-time log\",\"url\":\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]]}"
 
       - name: Clone mimir-build-script & prepare
@@ -92,22 +131,21 @@ jobs:
           LINK=$(clean "$(grep -oP 'Download Link: \K.*' build_output.log | tail -1 || true)")
           [ -n "$LINK" ] && echo "ZIP_DOWNLOAD_LINK=$LINK" >> $GITHUB_ENV
 
-          SERVER=$(clean "$(grep -oP 'Uploading ZIP to \K.*?(?=\.\.\.)' build_output.log | tail -1 || true)")
+          SERVER=$(clean "$(grep -oP 'Uploading ZIP to \K[^.]*' build_output.log | tail -1 || true)")
           [ -n "$SERVER" ] && echo "GOFILE_SERVER=$SERVER" >> $GITHUB_ENV
 
           TIME=$(clean "$(grep -oP 'Completed successfully in: \K.*' build_output.log | tail -1 || true)")
           [ -n "$TIME" ] && echo "BUILD_DURATION=$TIME" >> $GITHUB_ENV
 
-          TOOLCHAIN=$(clean "$(grep -oP 'Using: \K.*' build_output.log | tail -1 || true)")
+          TOOLCHAIN=$(clean "$(grep -oP 'Clang version: \K.*' build_output.log | tail -1 || true)")
           [ -n "$TOOLCHAIN" ] && echo "TOOLCHAIN_VERSION=$TOOLCHAIN" >> $GITHUB_ENV
 
           ERROR_URL=$(clean "$(grep -oP 'Rustbin Log: \K.*' build_output.log | tail -1 || true)")
           [ -n "$ERROR_URL" ] && echo "ERROR_LOG_URL=$ERROR_URL" >> $GITHUB_ENV
 
           ZIP_FILE=$(ls *.zip 2>/dev/null | head -1)
-          [ -n "$ZIP_FILE" ] && echo "ZIP_FILENAME=$ZIP_FILE" >> $GITHUB_ENV
-
-          if ls *.zip 1> /dev/null 2>&1; then
+          if [ -n "$ZIP_FILE" ]; then
+            echo "ZIP_FILENAME=$ZIP_FILE" >> $GITHUB_ENV
             echo "ZIP_FOUND=true" >> $GITHUB_ENV
           else
             echo "ZIP_FOUND=false" >> $GITHUB_ENV
@@ -118,18 +156,19 @@ jobs:
         if: success()
         run: |
           BTN_TEXT="📥 Download (Gofile)"
-          BTN_URL="${{ env.ZIP_DOWNLOAD_LINK }}"
+          BTN_URL="${ZIP_DOWNLOAD_LINK:-https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}}"
+          
           SERVER_LINE=""
-          if [ -n "${{ env.GOFILE_SERVER }}" ]; then
-            SERVER_LINE="🌐 *Server:* \`${{ env.GOFILE_SERVER }}\` (10 days)%0A"
+          if [ -n "${GOFILE_SERVER}" ]; then
+            SERVER_LINE="🌐 *Server:* \`${GOFILE_SERVER}\` (10 days)%0A"
           fi
 
           MSG="✅ *New Mimir Kernel build for ${{ env.DEVICE_NAME }} available!*%0A%0A"
-          MSG+="📦 *File:* \`${{ env.ZIP_FILENAME }}\`%0A"
-          MSG+="🛠️ *Compiler:* \`${{ env.TOOLCHAIN_VERSION }}\`%0A"
-          MSG+="⏱️ *Time:* \`${{ env.BUILD_DURATION }}\`%0A"
+          MSG+="📦 *File:* \`${ZIP_FILENAME}\`%0A"
+          MSG+="🛠️ *Compiler:* \`${TOOLCHAIN_VERSION}\`%0A"
+          MSG+="⏱️ *Time:* \`${BUILD_DURATION}\`%0A"
           MSG+="$SERVER_LINE"
-          MSG+="🔐 *SHA256:* \`${{ env.ZIP_SHA256 }}\`"
+          MSG+="🔐 *SHA256:* \`${ZIP_SHA256}\`"
 
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
@@ -140,12 +179,9 @@ jobs:
       - name: Send Notification (Failure)
         if: failure()
         run: |
-          [ -z "$ERROR_LOG_URL" ] && ERROR_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" || ERROR_URL="$ERROR_LOG_URL"
+          ERROR_URL="${ERROR_LOG_URL:-https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}}"
 
-          MESSAGE="❌ *Kernel build failed!*
-          📦 *Repo:* \`${{ env.REPO_NAME }}\`
-          🛠️  *Compiler:* \`${TOOLCHAIN_VERSION:-unknown}\`
-          🆔 *Run ID:* ${{ github.run_id }}"
+          MESSAGE="❌ *Kernel build failed!*%0A%0A📦 *Repo:* \`${{ env.REPO_NAME }}\`%0A📱 *Device:* ${{ env.DEVICE_NAME }}%0A🛠️ *Compiler:* \`${TOOLCHAIN_VERSION:-unknown}\`%0A🆔 *Run ID:* ${{ github.run_id }}"
 
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
@@ -156,10 +192,7 @@ jobs:
       - name: Send Notification (Cancelled)
         if: cancelled()
         run: |
-          MESSAGE="⏹️ *Kernel build was cancelled!*
-          📦 *Repo:* \`${{ env.REPO_NAME }}\`
-          🌿 *Branch:* \`${{ github.ref_name }}\`
-          🆔 *Run ID:* ${{ github.run_id }}"
+          MESSAGE="⏹️ *Kernel build was cancelled!*%0A%0A📦 *Repo:* \`${{ env.REPO_NAME }}\`%0A📱 *Device:* ${{ env.DEVICE_NAME }}%0A🌿 *Branch:* \`${{ github.ref_name }}\`%0A🆔 *Run ID:* ${{ github.run_id }}"
 
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
